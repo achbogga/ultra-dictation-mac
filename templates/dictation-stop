@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BASE="${HOME}/.local/ultra_dictation"
+STATE_FILE="${BASE}/active.state"
+INDICATOR_BIN="${BASE}/dictation-indicator"
+
+mkdir -p "${BASE}"
+printf 'off\n' > "${STATE_FILE}"
+echo "dictation off"
+"${INDICATOR_BIN}" off >/dev/null 2>&1 &

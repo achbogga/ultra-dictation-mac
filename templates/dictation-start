@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BASE="${HOME}/.local/ultra_dictation"
+STATE_FILE="${BASE}/active.state"
+PLIST_FILE="${HOME}/Library/LaunchAgents/local.ultra.dictation.plist"
+ENGINE_PATTERN="${HOME}/.local/ultra_dictation/engine.py"
+INDICATOR_BIN="${BASE}/dictation-indicator"
+
+mkdir -p "${BASE}"
+printf 'on\n' > "${STATE_FILE}"
+
+uid="$(id -u)"
+launchctl enable "gui/${uid}/local.ultra.dictation" >/dev/null 2>&1 || true
+launchctl bootstrap "gui/${uid}" "${PLIST_FILE}" >/dev/null 2>&1 || true
+
+if ! pgrep -f "${ENGINE_PATTERN}" >/dev/null 2>&1; then
+  launchctl kickstart "gui/${uid}/local.ultra.dictation" >/dev/null 2>&1 || true
+  sleep 0.6
+fi
+
+if pgrep -f "${ENGINE_PATTERN}" >/dev/null 2>&1; then
+  echo "dictation on"
+  "${INDICATOR_BIN}" on >/dev/null 2>&1 &
+else
+  echo "dictation helper failed to start — check ${BASE}/dictation.log" >&2
+  "${INDICATOR_BIN}" error >/dev/null 2>&1 &
+  exit 1
+fi

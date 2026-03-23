@@ -1,0 +1,22 @@
+{
+  "title": "Ultra Dictation",
+  "rules": [
+    {
+      "description": "Ultra Dictation Toggle (G1/F13)",
+      "manipulators": [
+        {
+          "from": {
+            "key_code": "f13",
+            "modifiers": { "optional": ["any"] }
+          },
+          "to": [
+            {
+              "shell_command": "/bin/bash -lc '$HOME/.bin/dictation-toggle'"
+            }
+          ],
+          "type": "basic"
+        }
+      ]
+    }
+  ]
+}

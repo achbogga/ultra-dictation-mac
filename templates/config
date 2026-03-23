@@ -1,0 +1,15 @@
+# Ultra Dictation runtime configuration
+ULTRA_DICTATION_MODEL=mlx-community/whisper-large-v3-turbo
+
+# Optional input selector.
+# Example:
+# ULTRA_DICTATION_INPUT_DEVICE=Shure MV7+
+
+# Max recorded frames per dictation session.
+ULTRA_DICTATION_SESSION_BUFFER_FRAMES=3000
+
+# Skip transcription if the session RMS stays below this threshold.
+ULTRA_DICTATION_SHUTDOWN_RMS_THRESHOLD=0.01
+
+# 1 = show a notification after paste.
+ULTRA_DICTATION_NOTIFY=0

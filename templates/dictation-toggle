@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ENGINE_PATTERN="${HOME}/.local/ultra_dictation/engine.py"
+START_SCRIPT="${HOME}/.bin/dictation-start"
+STOP_SCRIPT="${HOME}/.bin/dictation-stop"
+TOGGLE_STAMP="${HOME}/.local/ultra_dictation/.toggle_ts"
+STATE_FILE="${HOME}/.local/ultra_dictation/active.state"
+DEBOUNCE_SECONDS="1.20"
+
+mkdir -p "${HOME}/.local/ultra_dictation"
+
+NOW="$(
+  /usr/bin/python3 - <<'PY'
+import time
+print(f"{time.time():.6f}")
+PY
+)"
+
+if [[ -f "${TOGGLE_STAMP}" ]]; then
+  LAST="$(cat "${TOGGLE_STAMP}" 2>/dev/null || true)"
+  if [[ -n "${LAST}" ]] && /usr/bin/python3 - "${NOW}" "${LAST}" "${DEBOUNCE_SECONDS}" <<'PY'
+import sys
+now = float(sys.argv[1])
+last = float(sys.argv[2])
+debounce = float(sys.argv[3])
+sys.exit(0 if now - last < debounce else 1)
+PY
+  then
+    echo "dictation toggle debounced"
+    exit 0
+  fi
+fi
+
+printf '%s\n' "${NOW}" > "${TOGGLE_STAMP}"
+
+STATE="off"
+if [[ -f "${STATE_FILE}" ]]; then
+  STATE="$(tr '[:upper:]' '[:lower:]' < "${STATE_FILE}" | tr -d '[:space:]')"
+fi
+
+if [[ "${STATE}" == "on" ]] && pgrep -f "${ENGINE_PATTERN}" >/dev/null 2>&1; then
+  exec "${STOP_SCRIPT}"
+else
+  exec "${START_SCRIPT}"
+fi
