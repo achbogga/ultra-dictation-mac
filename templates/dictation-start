@@ -11,7 +11,12 @@ mkdir -p "${BASE}"
 printf 'on\n' > "${STATE_FILE}"
 
 uid="$(id -u)"
-launchctl enable "gui/${uid}/local.ultra.dictation" >/dev/null 2>&1 || true
+if [[ ! -f "${PLIST_FILE}" ]]; then
+  echo "dictation helper is not installed — missing ${PLIST_FILE}" >&2
+  "${INDICATOR_BIN}" error >/dev/null 2>&1 &
+  exit 1
+fi
+
 launchctl bootstrap "gui/${uid}" "${PLIST_FILE}" >/dev/null 2>&1 || true
 
 if ! pgrep -f "${ENGINE_PATTERN}" >/dev/null 2>&1; then

@@ -17,7 +17,7 @@ cp "${ROOT_DIR}/install.sh" "${RESOURCES_DIR}/install.sh"
 cp "${ROOT_DIR}/uninstall.sh" "${RESOURCES_DIR}/uninstall.sh"
 cp "${ROOT_DIR}/requirements.txt" "${RESOURCES_DIR}/requirements.txt"
 cp -R "${ROOT_DIR}/templates" "${RESOURCES_DIR}/templates"
-find "${RESOURCES_DIR}/templates" -name '__pycache__' -type d -prune -exec rm -rf {} +
+find "${RESOURCES_DIR}/templates" \( -name '__pycache__' -type d -o -name '*.pyc' -type f \) -exec rm -rf {} +
 cp "${ROOT_DIR}/README.md" "${RESOURCES_DIR}/README.md"
 chmod +x "${MACOS_DIR}/${APP_NAME}" "${RESOURCES_DIR}/install.sh" "${RESOURCES_DIR}/uninstall.sh"
 

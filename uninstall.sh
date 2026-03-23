@@ -15,7 +15,6 @@ done
 
 BASE="${HOME}/.local/ultra_dictation"
 BIN_DIR="${HOME}/.bin"
-CFG_DIR="${HOME}/.config/ultra_dictation"
 LAUNCH_AGENT_FILE="${HOME}/Library/LaunchAgents/local.ultra.dictation.plist"
 KARABINER_JSON="${HOME}/.config/karabiner/karabiner.json"
 KARABINER_ASSET_FILE="${HOME}/.config/karabiner/assets/complex_modifications/ultra-dictation.json"
@@ -23,7 +22,6 @@ KARABINER_ASSET_FILE="${HOME}/.config/karabiner/assets/complex_modifications/ult
 printf 'off\n' > "${BASE}/active.state" 2>/dev/null || true
 uid="$(id -u)"
 launchctl bootout "gui/${uid}" "${LAUNCH_AGENT_FILE}" >/dev/null 2>&1 || true
-launchctl disable "gui/${uid}/local.ultra.dictation" >/dev/null 2>&1 || true
 
 rm -f "${LAUNCH_AGENT_FILE}"
 rm -f "${BIN_DIR}/dictation-start" "${BIN_DIR}/dictation-stop" "${BIN_DIR}/dictation-toggle"

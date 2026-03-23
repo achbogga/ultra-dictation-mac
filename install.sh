@@ -3,12 +3,21 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RESOURCE_DIR="${ROOT_DIR}"
+BOOT_ON_LOGIN="${ULTRA_DICTATION_BOOT_ON_LOGIN:-0}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --resource-dir)
       RESOURCE_DIR="$2"
       shift 2
+      ;;
+    --enable-on-boot)
+      BOOT_ON_LOGIN="1"
+      shift
+      ;;
+    --disable-on-boot)
+      BOOT_ON_LOGIN="0"
+      shift
       ;;
     *)
       echo "Unknown argument: $1" >&2
@@ -29,7 +38,6 @@ KARABINER_JSON="${KARABINER_DIR}/karabiner.json"
 KARABINER_ASSET_DIR="${KARABINER_DIR}/assets/complex_modifications"
 KARABINER_ASSET_FILE="${KARABINER_ASSET_DIR}/ultra-dictation.json"
 VENV_DIR="${BASE}/venv"
-PYTHON_BIN="${VENV_DIR}/bin/python"
 PIP_BIN="${VENV_DIR}/bin/pip"
 SWIFTC_BIN="$(xcrun --find swiftc 2>/dev/null || true)"
 
@@ -45,6 +53,11 @@ require_cmd launchctl
 
 if [[ -z "${SWIFTC_BIN}" ]]; then
   echo "swiftc was not found. Install Apple Command Line Tools first." >&2
+  exit 1
+fi
+
+if [[ "${BOOT_ON_LOGIN}" != "0" && "${BOOT_ON_LOGIN}" != "1" ]]; then
+  echo "ULTRA_DICTATION_BOOT_ON_LOGIN must be 0 or 1." >&2
   exit 1
 fi
 
@@ -71,7 +84,21 @@ printf 'off\n' > "${BASE}/active.state"
 "${SWIFTC_BIN}" "${BASE}/indicator.swift" -o "${BASE}/dictation-indicator"
 chmod +x "${BASE}/dictation-indicator"
 
-sed "s#__HOME__#${HOME}#g" "${TEMPLATE_DIR}/local.ultra.dictation.plist.in" > "${LAUNCH_AGENT_FILE}"
+python3 - "${TEMPLATE_DIR}/local.ultra.dictation.plist.in" "${LAUNCH_AGENT_FILE}" "${HOME}" "${BOOT_ON_LOGIN}" <<'PY'
+from pathlib import Path
+import sys
+
+template_path = Path(sys.argv[1])
+output_path = Path(sys.argv[2])
+home = sys.argv[3]
+boot_on_login = sys.argv[4] == "1"
+run_at_load = "<true/>" if boot_on_login else "<false/>"
+
+content = template_path.read_text()
+content = content.replace("__HOME__", home)
+content = content.replace("__RUN_AT_LOAD__", run_at_load)
+output_path.write_text(content)
+PY
 install -m 0644 "${TEMPLATE_DIR}/karabiner-ultra-dictation.json" "${KARABINER_ASSET_FILE}"
 
 if [[ -f "${KARABINER_JSON}" ]]; then
@@ -101,10 +128,11 @@ PY
 fi
 
 uid="$(id -u)"
-launchctl enable "gui/${uid}/local.ultra.dictation" >/dev/null 2>&1 || true
 launchctl bootout "gui/${uid}" "${LAUNCH_AGENT_FILE}" >/dev/null 2>&1 || true
-launchctl bootstrap "gui/${uid}" "${LAUNCH_AGENT_FILE}"
-launchctl kickstart "gui/${uid}/local.ultra.dictation"
+if [[ "${BOOT_ON_LOGIN}" == "1" ]]; then
+  launchctl bootstrap "gui/${uid}" "${LAUNCH_AGENT_FILE}"
+  launchctl kickstart "gui/${uid}/local.ultra.dictation"
+fi
 
 cat <<EOF
 Install complete.
@@ -115,6 +143,7 @@ Files installed:
   ${BIN_DIR}/dictation-stop
   ${BIN_DIR}/dictation-toggle
   ${LAUNCH_AGENT_FILE}
+  Start helper on login: $( [[ "${BOOT_ON_LOGIN}" == "1" ]] && echo yes || echo no )
 
 Karabiner:
   Asset file: ${KARABINER_ASSET_FILE}

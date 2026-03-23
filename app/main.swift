@@ -6,6 +6,9 @@ final class InstallerViewController: NSViewController {
     private let installButton = NSButton(title: "Install / Update", target: nil, action: nil)
     private let uninstallButton = NSButton(title: "Uninstall", target: nil, action: nil)
     private let readmeButton = NSButton(title: "Open README", target: nil, action: nil)
+    private let bootCheckbox = NSButton(checkboxWithTitle: "Start helper automatically at login", target: nil, action: nil)
+    private let defaults = UserDefaults.standard
+    private let bootPreferenceKey = "launchAtLogin"
 
     override func loadView() {
         self.view = NSView(frame: NSRect(x: 0, y: 0, width: 720, height: 520))
@@ -27,6 +30,10 @@ final class InstallerViewController: NSViewController {
         uninstallButton.action = #selector(runUninstall)
         readmeButton.target = self
         readmeButton.action = #selector(openReadme)
+        bootCheckbox.target = self
+        bootCheckbox.action = #selector(updateBootPreference)
+        bootCheckbox.frame = NSRect(x: 436, y: 432, width: 260, height: 24)
+        bootCheckbox.state = defaults.bool(forKey: bootPreferenceKey) ? .on : .off
 
         let scrollView = NSScrollView(frame: NSRect(x: 24, y: 24, width: 672, height: 388))
         scrollView.hasVerticalScroller = true
@@ -39,11 +46,13 @@ final class InstallerViewController: NSViewController {
         view.addSubview(installButton)
         view.addSubview(uninstallButton)
         view.addSubview(readmeButton)
+        view.addSubview(bootCheckbox)
         view.addSubview(scrollView)
     }
 
     @objc private func runInstall() {
-        runScript(named: "install.sh")
+        let bootArg = bootCheckbox.state == .on ? "--enable-on-boot" : "--disable-on-boot"
+        runScript(named: "install.sh", extraArguments: [bootArg])
     }
 
     @objc private func runUninstall() {
@@ -55,7 +64,11 @@ final class InstallerViewController: NSViewController {
         NSWorkspace.shared.open(URL(fileURLWithPath: readmePath))
     }
 
-    private func runScript(named name: String) {
+    @objc private func updateBootPreference() {
+        defaults.set(bootCheckbox.state == .on, forKey: bootPreferenceKey)
+    }
+
+    private func runScript(named name: String, extraArguments: [String] = []) {
         guard let scriptPath = Bundle.main.path(forResource: name.replacingOccurrences(of: ".sh", with: ""), ofType: "sh"),
               let resourcePath = Bundle.main.resourcePath else {
             append("Unable to locate \(name) in app resources.\n")
@@ -69,7 +82,7 @@ final class InstallerViewController: NSViewController {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = [scriptPath, "--resource-dir", resourcePath]
+        process.arguments = [scriptPath, "--resource-dir", resourcePath] + extraArguments
 
         let pipe = Pipe()
         process.standardOutput = pipe

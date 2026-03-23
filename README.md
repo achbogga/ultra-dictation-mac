@@ -32,6 +32,18 @@ Shell installer:
 sh install.sh
 ```
 
+Start the helper automatically at login:
+
+```bash
+sh install.sh --enable-on-boot
+```
+
+Install without starting it at login:
+
+```bash
+sh install.sh --disable-on-boot
+```
+
 Build the installer app:
 
 ```bash
@@ -39,10 +51,13 @@ sh scripts/build_app.sh
 open dist/UltraDictationInstaller.app
 ```
 
+The native installer app includes a checkbox for whether the helper should start automatically at login.
+
 ## Notes
 
 - The installer tries to patch `~/.config/karabiner/karabiner.json` if it exists.
 - It also installs a standalone Karabiner asset JSON file under `~/.config/karabiner/assets/complex_modifications/`.
+- Launch-at-login is optional. The default install keeps boot startup off unless you pass `--enable-on-boot` or tick the checkbox in the installer app.
 - If your `G1` key already emits `F13`, the default install should be enough.
 - If your focused app still does not receive pasted text, the clipboard should still contain the transcription.
 

@@ -15,7 +15,7 @@
   </dict>
   <key>StandardOutPath</key>   <string>__HOME__/.local/ultra_dictation/dictation.log</string>
   <key>StandardErrorPath</key> <string>__HOME__/.local/ultra_dictation/dictation.log</string>
-  <key>RunAtLoad</key>         <true/>
+  <key>RunAtLoad</key>         __RUN_AT_LOAD__
   <key>KeepAlive</key>
   <dict><key>SuccessfulExit</key><false/></dict>
   <key>ThrottleInterval</key>  <integer>5</integer>
