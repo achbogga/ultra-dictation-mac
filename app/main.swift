@@ -7,8 +7,13 @@ final class InstallerViewController: NSViewController {
     private let uninstallButton = NSButton(title: "Uninstall", target: nil, action: nil)
     private let readmeButton = NSButton(title: "Open README", target: nil, action: nil)
     private let bootCheckbox = NSButton(checkboxWithTitle: "Start helper automatically at login", target: nil, action: nil)
+    private let hotkeyLabel = NSTextField(labelWithString: "Karabiner key_code:")
+    private let hotkeyField = NSTextField(string: "")
     private let defaults = UserDefaults.standard
     private let bootPreferenceKey = "launchAtLogin"
+    private let hotkeyPreferenceKey = "karabinerHotkey"
+    private let defaultHotkey = "f13"
+    private let validHotkeyCharacters = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyz0123456789_")
 
     override func loadView() {
         self.view = NSView(frame: NSRect(x: 0, y: 0, width: 720, height: 520))
@@ -34,8 +39,13 @@ final class InstallerViewController: NSViewController {
         bootCheckbox.action = #selector(updateBootPreference)
         bootCheckbox.frame = NSRect(x: 436, y: 432, width: 260, height: 24)
         bootCheckbox.state = defaults.bool(forKey: bootPreferenceKey) ? .on : .off
+        hotkeyLabel.frame = NSRect(x: 24, y: 394, width: 150, height: 24)
+        hotkeyField.frame = NSRect(x: 176, y: 390, width: 160, height: 28)
+        hotkeyField.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        hotkeyField.placeholderString = defaultHotkey
+        hotkeyField.stringValue = defaults.string(forKey: hotkeyPreferenceKey) ?? defaultHotkey
 
-        let scrollView = NSScrollView(frame: NSRect(x: 24, y: 24, width: 672, height: 388))
+        let scrollView = NSScrollView(frame: NSRect(x: 24, y: 24, width: 672, height: 352))
         scrollView.hasVerticalScroller = true
         scrollView.borderType = .bezelBorder
         outputView.isEditable = false
@@ -47,12 +57,23 @@ final class InstallerViewController: NSViewController {
         view.addSubview(uninstallButton)
         view.addSubview(readmeButton)
         view.addSubview(bootCheckbox)
+        view.addSubview(hotkeyLabel)
+        view.addSubview(hotkeyField)
         view.addSubview(scrollView)
     }
 
     @objc private func runInstall() {
         let bootArg = bootCheckbox.state == .on ? "--enable-on-boot" : "--disable-on-boot"
-        runScript(named: "install.sh", extraArguments: [bootArg])
+        let hotkey = normalizedHotkey(from: hotkeyField.stringValue)
+        guard isValidHotkey(hotkey) else {
+            statusLabel.stringValue = "Invalid hotkey."
+            append("Hotkey must use lowercase letters, numbers, and underscores only.\n")
+            return
+        }
+
+        defaults.set(hotkey, forKey: hotkeyPreferenceKey)
+        hotkeyField.stringValue = hotkey
+        runScript(named: "install.sh", extraArguments: [bootArg, "--hotkey", hotkey])
     }
 
     @objc private func runUninstall() {
@@ -66,6 +87,14 @@ final class InstallerViewController: NSViewController {
 
     @objc private func updateBootPreference() {
         defaults.set(bootCheckbox.state == .on, forKey: bootPreferenceKey)
+    }
+
+    private func normalizedHotkey(from value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private func isValidHotkey(_ value: String) -> Bool {
+        !value.isEmpty && value.unicodeScalars.allSatisfy { validHotkeyCharacters.contains($0) }
     }
 
     private func runScript(named name: String, extraArguments: [String] = []) {

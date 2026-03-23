@@ -2,11 +2,11 @@
   "title": "Ultra Dictation",
   "rules": [
     {
-      "description": "Ultra Dictation Toggle (G1/F13)",
+      "description": "Ultra Dictation Toggle (__HOTKEY__)",
       "manipulators": [
         {
           "from": {
-            "key_code": "f13",
+            "key_code": "__HOTKEY__",
             "modifiers": { "optional": ["any"] }
           },
           "to": [

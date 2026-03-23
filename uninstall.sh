@@ -41,7 +41,7 @@ if profiles:
     complex_mods = profile.get("complex_modifications", {})
     rules = complex_mods.get("rules", [])
     complex_mods["rules"] = [
-        r for r in rules if r.get("description") != "Ultra Dictation Toggle (G1/F13)"
+        r for r in rules if not str(r.get("description", "")).startswith("Ultra Dictation Toggle")
     ]
     path.write_text(json.dumps(data, indent=4) + "\n")
 PY

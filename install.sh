@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RESOURCE_DIR="${ROOT_DIR}"
 BOOT_ON_LOGIN="${ULTRA_DICTATION_BOOT_ON_LOGIN:-0}"
+HOTKEY="${ULTRA_DICTATION_HOTKEY:-f13}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -18,6 +19,14 @@ while [[ $# -gt 0 ]]; do
     --disable-on-boot)
       BOOT_ON_LOGIN="0"
       shift
+      ;;
+    --hotkey)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for --hotkey" >&2
+        exit 1
+      fi
+      HOTKEY="$2"
+      shift 2
       ;;
     *)
       echo "Unknown argument: $1" >&2
@@ -61,6 +70,12 @@ if [[ "${BOOT_ON_LOGIN}" != "0" && "${BOOT_ON_LOGIN}" != "1" ]]; then
   exit 1
 fi
 
+HOTKEY="$(printf '%s' "${HOTKEY}" | tr '[:upper:]' '[:lower:]')"
+if [[ ! "${HOTKEY}" =~ ^[a-z0-9_]+$ ]]; then
+  echo "Hotkey must be a Karabiner key_code using only lowercase letters, numbers, and underscores." >&2
+  exit 1
+fi
+
 mkdir -p "${BASE}" "${BIN_DIR}" "${CFG_DIR}" "${LAUNCH_AGENT_DIR}" "${KARABINER_ASSET_DIR}"
 
 if [[ ! -d "${VENV_DIR}" ]]; then
@@ -99,11 +114,22 @@ content = content.replace("__HOME__", home)
 content = content.replace("__RUN_AT_LOAD__", run_at_load)
 output_path.write_text(content)
 PY
-install -m 0644 "${TEMPLATE_DIR}/karabiner-ultra-dictation.json" "${KARABINER_ASSET_FILE}"
+python3 - "${TEMPLATE_DIR}/karabiner-ultra-dictation.json" "${KARABINER_ASSET_FILE}" "${HOTKEY}" <<'PY'
+from pathlib import Path
+import sys
+
+template_path = Path(sys.argv[1])
+output_path = Path(sys.argv[2])
+hotkey = sys.argv[3]
+
+content = template_path.read_text()
+content = content.replace("__HOTKEY__", hotkey)
+output_path.write_text(content)
+PY
 
 if [[ -f "${KARABINER_JSON}" ]]; then
   cp "${KARABINER_JSON}" "${KARABINER_JSON}.bak.$(date +%Y%m%d-%H%M%S)"
-  python3 - "${KARABINER_JSON}" "${TEMPLATE_DIR}/karabiner-ultra-dictation.json" <<'PY'
+  python3 - "${KARABINER_JSON}" "${KARABINER_ASSET_FILE}" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -120,7 +146,7 @@ if profiles:
     profile = profiles[0]
     complex_mods = profile.setdefault("complex_modifications", {})
     rules = complex_mods.setdefault("rules", [])
-    rules = [r for r in rules if r.get("description") != rule.get("description")]
+    rules = [r for r in rules if not str(r.get("description", "")).startswith("Ultra Dictation Toggle")]
     rules.insert(0, rule)
     complex_mods["rules"] = rules
     karabiner_path.write_text(json.dumps(data, indent=4) + "\n")
@@ -144,13 +170,14 @@ Files installed:
   ${BIN_DIR}/dictation-toggle
   ${LAUNCH_AGENT_FILE}
   Start helper on login: $( [[ "${BOOT_ON_LOGIN}" == "1" ]] && echo yes || echo no )
+  Karabiner hotkey: ${HOTKEY}
 
 Karabiner:
   Asset file: ${KARABINER_ASSET_FILE}
   Primary config patched: $( [[ -f "${KARABINER_JSON}" ]] && echo yes || echo no )
 
 Next:
-  1. Map Logitech G1 to F13 in Logitech Options+ or G Hub
-  2. Ensure Karabiner uses the installed "Ultra Dictation Toggle (G1/F13)" rule
-  3. Press G1 once to record, press again to transcribe and paste
+  1. Map your hardware button to ${HOTKEY} in Logitech Options+, G Hub, or your keyboard tool of choice
+  2. Ensure Karabiner uses the installed "Ultra Dictation Toggle (${HOTKEY})" rule
+  3. Press the configured hotkey once to record, press it again to transcribe and paste
 EOF
